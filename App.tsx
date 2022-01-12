@@ -11,7 +11,6 @@ export default class App extends Component {
         this.state = {
             imgUrl: " ",
 	    imgId: "4a51bfed-7e36-4679-84db-ec7c273eda6e",
->>>>>>> Stashed changes
             text: "Nothing here yet",
             name: "",
         };
@@ -148,7 +147,6 @@ export default class App extends Component {
 	      </View>
 	    </View >
 	);
->>>>>>> Stashed changes
     }
 }
 
