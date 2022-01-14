@@ -1,59 +1,102 @@
 
 import React, { Component, useState } from "react";
 
-import XMLParser from "react-xml-parser";
-
 import { StyleSheet, View, Button, Image, Text, TextInput, Alert } from "react-native";
 
 export default class App extends Component {
     constructor(props: any) {
         super(props);
         this.state = {
-            imgUrl: " ",
-	    imgId: "4a51bfed-7e36-4679-84db-ec7c273eda6e",
+            url: " ",
             text: "Nothing here yet",
-            name: "",
+	    gid: " ",
+            name: "Ludvig",
+	    garments: []
         };
     }
-
-    selectGarment = (url) => {
-	return fetch(url)
-	    .then((res) => res.text())
-	    .then((xmlText) => {
-		var xml = new XMLParser().parseFromString(xmlText);
-		const garments = xml.getElementsByTagName("Key");
-		return garments[parseInt(Math.random() * garments.length)].value;
+    
+    fetchRandomGarment = (garment) => {
+	let gid = garment["garment_id"]
+	let gimages = garment["garment_images"]
+	let iid = gimages[gimages.length - 2]["image_id"]
+	let url = `http://192.168.0.21:3002/getimage?gid=${gid}&iid=${iid}`;
+	
+	fetch(url, {
+	    method: "GET",
+	    headers: {
+		Accept: 'application/json',
+		'Content-Type': 'application/json'
 	    }
-    )};
+	}).then((response) => response.text())
+	  .then((url) => {
+	      this.setState({
+		  url: url,
+		  gid: gid,
+		  text: garment["garment_label"]
+	      });
+	  })
+	  .catch(err => console.error(err));
+    }
+    
+    componentDidMount() {
+    	const url = fetch('http://192.168.0.21:3002/getgarments', {
+	    method: 'GET',
+	    headers: {
+		Accept: 'application/json',
+		'Content-Type': 'application/json'
+	    }
+	}).then((result) => result.json())
+	  .then((garments) => this.setState({garments: garments}))
+	  .then(() => {
+	      
+	      const garments = this.state.garments
+	      const garment = garments[parseInt(Math.random() * garments.length)]
 
-    fetchGarments = (url) => {
-	fetch('http://192.168.191.58:3002/getimages', {
+	      this.fetchRandomGarment(garment)
+	  })
+    }
+
+    fetchGarments = () => {
+	console.log(this.state.images)
+	fetch('http://192.168.0.21:3002/getimages', {
 	    method: 'GET',
 	    headers: {
 		Accept: 'application/json',
 		'Content-Type': 'application/json'
 	    }
 	}).then((result) => result.text())
-	  .then((url) => {
-	      return this.selectGarment(url)
-	  }).then((key) => {
-	      const url = `http://192.168.191.58:3002/getimage/${key}`;
-	      fetch(url, {
-		  method: "GET",
-		  headers: {
-		    Accept: 'application/json',
-		    'Content-Type': 'application/json'
-		}
-	    }).then((response) => response.text())
-	      .then((data) => {
-		  this.setState({imgUrl: data});
-	      })
-	      .catch(err => console.error(err));
-	  });
+	       .then((url) => {
+		   return this.selectGarment(url)
+	       }).then((key) => {
+		   const url = `http://192.168.0.21:3002/getimage?url=${key}`;
+		   fetch(url, {
+		       method: "GET",
+		       headers: {
+			   Accept: 'application/json',
+			   'Content-Type': 'application/json'
+		       }
+		   }).then((response) => response.text())
+		     .then((url) => {
+			 console.log(url)
+			 this.setState({imgUrl: url});
+		     })
+		     .catch(err => console.error(err));
+	       });
+    }
+
+    getGarment = () => {
+	fetch("http://192.168.0.21:3002/getrandomgarment", {
+	    method: 'GET',
+	    headers: {
+		Accept: 'application/json',
+		'Content-Type': 'application/json'
+	    }
+	}).then((result) => result.json())
+	  .then((garment) => { this.fetchRandomGarment(garment) });
     }
 
     handleLike = () => {
-        fetch("http://192.168.191.58:3002/event", {
+        fetch("http://192.168.0.21:3002/event", {
 	    method: "POST",
 	    headers: {
                 Accept: "application/json",
@@ -61,16 +104,14 @@ export default class App extends Component {
 	    },
 	    body: JSON.stringify({
                 person_name: this.state.name,
-                garment_id: this.state.imgId,
+                garment_id: this.state.gid,
                 action: "like",
 	    })
-        }).then(() => {
-	    this.fetchGarments()
-        });
+        }).then(() => { this.getGarment() });
     }
 
     handleDislike = () => {
-        fetch("http://192.168.191.58:3002/event", {
+        fetch("http://192.168.0.21:3002/event", {
 	    method: "POST",
 	    headers: {
                 Accept: "application/json",
@@ -78,48 +119,15 @@ export default class App extends Component {
 	    },
 	    body: JSON.stringify({
                 person_name: this.state.name,
-                garment_id: this.state.imgId,
+                garment_id: this.state.gid,
                 action: "dislike",
 	    })
-        }).then(() => {
-	    fetch("http://178.62.226.79:3002/get")
-                .then((res) => res.json())
-                .then((data) => {
-		    console.log(data)
-                });
-        });
+        }).then(() => { this.getGarment() });
     }
-
-    handlePress = () => {
-	fetch('http://192.168.191.58:3002/getimages', {
-	    method: 'GET',
-	    headers: {
-		Accept: 'application/json',
-		'Content-Type': 'application/json'
-	    }
-	}).then((result) => result.text())
-	  .then((url) => {
-	      return this.selectGarment(url)
-	  }).then((key) => {
-	      const url = `http://192.168.191.58:3002/getimage/${key}`;
-	      fetch(url, {
-		  method: "GET",
-		  headers: {
-		    Accept: 'application/json',
-		    'Content-Type': 'application/json'
-		}
-	    }).then((response) => response.text())
-	      .then((data) => {
-		  this.setState({imgUrl: data});
-	      })
-	      .catch(err => console.error(err));
-	  });
-    };
 
     render() {
 	return (
 	    <View style={styles.container} >
-	      <Button title="Press" onPress={this.handlePress} />
 	      <TextInput
 		  onChangeText={(text) => {
 		      this.setState({ name: text });
@@ -130,8 +138,8 @@ export default class App extends Component {
 	      ></TextInput>
 	      <Text>{this.state.text}</Text>
 	      <Image
-		  source={{uri: this.state.imgUrl}}
-		  style={{ width: 200, height: 200 }}
+		  source={{uri: this.state.url}}
+		  style={{ width: 300, height: 400 }}
 	      />
 	      <View style={styles.buttonContainer}>
 		<Button
